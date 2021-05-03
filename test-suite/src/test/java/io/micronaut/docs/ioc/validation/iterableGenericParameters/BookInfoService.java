@@ -9,7 +9,9 @@ import java.util.Map;
 
 @Singleton
 public class BookInfoService {
+
     // tag::validate-iterables[]
+
     public void setBookAuthors(@NotBlank String bookName,
                                List<@NotBlank String> authors // <1>
     ) {
@@ -21,5 +23,6 @@ public class BookInfoService {
     ) {
         System.out.println("Set the start pages for all sections of book " + bookName);
     }
-    // tag::validate-iterables[]
+
+    // end::validate-iterables[]
 }

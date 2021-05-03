@@ -725,10 +725,10 @@ public class BeanDefinitionInjectProcessor extends AbstractInjectAnnotationProce
 
             boolean validationRequired = false;
             for (ClassElement classElement: typeArguments.values()) {
-//                if (elementHasValidatedTypeArguments(classElement)) {
-//                    classElement.annotate(ANN_VALID);
-//                    validationRequired = true;
-//                }
+                if (elementHasValidatedTypeArguments(classElement)) {
+                    classElement.annotate(ANN_VALID);
+                    validationRequired = true;
+                }
                 if (classElement.hasDeclaredStereotype(ANN_CONSTRAINT) ||
                     classElement.hasDeclaredStereotype(ANN_VALID)) {
                     validationRequired = true;

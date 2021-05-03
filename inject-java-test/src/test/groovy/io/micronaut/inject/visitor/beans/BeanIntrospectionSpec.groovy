@@ -1068,7 +1068,7 @@ class Test {
     }
 
     @Issue("https://github.com/micronaut-projects/micronaut-core/issues/1645")
-    void "test recusive generics 2"() {
+    void "test recursive generics 2"() {
         given:
         BeanIntrospection introspection = buildBeanIntrospection('test.Test','''\
 package test;
@@ -1080,6 +1080,7 @@ class Test<T extends B> {
         return child;
     } 
 }
+
 class B<T extends Test> {}
 
 ''')
