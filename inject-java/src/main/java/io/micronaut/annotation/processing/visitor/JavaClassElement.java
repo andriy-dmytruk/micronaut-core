@@ -80,6 +80,8 @@ public class JavaClassElement extends AbstractJavaElement implements ArrayableCl
     protected final TypeElement classElement;
     protected final JavaVisitorContext visitorContext;
     final List<? extends TypeMirror> typeArguments;
+    // type arguments bound to this class element
+    Map<String, ClassElement> boundTypeArguments;
     private final int arrayDimensions;
     private final boolean isTypeVariable;
     private List<PropertyElement> beanProperties;
@@ -1096,17 +1098,20 @@ public class JavaClassElement extends AbstractJavaElement implements ArrayableCl
     @Override
     public @NonNull
     Map<String, ClassElement> getTypeArguments() {
-        List<? extends TypeParameterElement> typeParameters = classElement.getTypeParameters();
-        Iterator<? extends TypeParameterElement> tpi = typeParameters.iterator();
-
-        Map<String, ClassElement> map = new LinkedHashMap<>();
-        while (tpi.hasNext()) {
-            TypeParameterElement tpe = tpi.next();
-            ClassElement classElement = mirrorToClassElement(tpe.asType(), visitorContext, this.genericTypeInfo, visitorContext.getConfiguration().includeTypeLevelAnnotationsInGenericArguments());
-            map.put(tpe.toString(), classElement);
+        if (boundTypeArguments != null) {
+            return boundTypeArguments;
         }
 
-        return Collections.unmodifiableMap(map);
+        List<? extends TypeParameterElement> typeParameters = classElement.getTypeParameters();
+        boundTypeArguments = new LinkedHashMap<>();
+
+        for (TypeParameterElement tpe: typeParameters) {
+            ClassElement classElement = mirrorToClassElement(tpe.asType(), visitorContext, genericTypeInfo,
+                    visitorContext.getConfiguration().includeTypeLevelAnnotationsInGenericArguments());
+            boundTypeArguments.put(tpe.toString(), classElement);
+        }
+
+        return Collections.unmodifiableMap(boundTypeArguments);
     }
 
     private Map<String, TypeMirror> getBoundTypeMirrors() {
@@ -1158,7 +1163,7 @@ public class JavaClassElement extends AbstractJavaElement implements ArrayableCl
         });
 
         if (!typeArguments.isEmpty()) {
-            result.put(JavaModelUtils.getClassName(this.classElement), getTypeArguments());
+            result.put(getName(), getTypeArguments());
         }
         return result;
     }
