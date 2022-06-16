@@ -844,6 +844,48 @@ public class BeanDefinitionInjectProcessor extends AbstractInjectAnnotationProce
             }, aopProxyWriter);
         }
 
+        /**
+         * Annotates elements with @Valid whenever any of the generic type parameters
+         * require validation (are annotated with @Valid or a constraint). This prevents
+         * from having to recursively find annotations in generic parameters during runtime.
+         * Recurses to nested generic parameters.
+         *
+         * @param element element to be annotated
+         * @return whether element or its generics has any validation annotations
+         */
+        private boolean recurseAnnotateWithValidIfRequired(TypedElement element) {
+            boolean hasValid = element.hasStereotype(ANN_VALID);
+            ClassElement classElement = element.getGenericType();
+
+            // Skip generic placeholder elements, since they cannot have annotations on generics
+            // and may cause a loop in the recursion
+            if (!classElement.isGenericPlaceholder()) {
+                final Map<String, ClassElement> typeArguments = classElement.getTypeArguments();
+
+                for (ClassElement typeArgument: typeArguments.values()) {
+                    boolean typeArgumentRequiresValidation = recurseAnnotateWithValidIfRequired(typeArgument);
+                    if (typeArgumentRequiresValidation && !hasValid) {
+                        element.annotate(ANN_VALID);
+                        hasValid = true;
+                    }
+                }
+            }
+
+            return hasValid || element.hasStereotype(ANN_CONSTRAINT);
+        }
+
+        private boolean methodHasValidatedParameters(JavaMethodElement javaMethodElement) {
+            boolean validated = false;
+
+            final ParameterElement[] parameters = javaMethodElement.getParameters();
+            for (ParameterElement parameter: parameters) {
+                boolean parameterRequiresValidation = recurseAnnotateWithValidIfRequired(parameter);
+                validated = validated || parameterRequiresValidation;
+            }
+
+            return validated;
+        }
+
         @Override
         public Object visitExecutable(ExecutableElement method, Object o) {
             if (method.getKind() == ElementKind.CONSTRUCTOR) {
@@ -905,11 +947,30 @@ public class BeanDefinitionInjectProcessor extends AbstractInjectAnnotationProce
                             hasAroundStereotype(annotationMetadata);
 
             boolean hasConstraints = false;
-            if (isDeclaredBean && !methodAnnotationMetadata.hasStereotype(ANN_VALIDATED) &&
-                    Arrays.stream(javaMethodElement.getParameters())
-                            .anyMatch(p -> p.hasStereotype(ANN_CONSTRAINT) || p.hasStereotype(ANN_VALID))) {
-                hasConstraints = true;
-                methodAnnotationMetadata = javaMethodElement.annotate(ANN_VALIDATED);
+
+            if (isDeclaredBean) {
+                // Check if it has Validated Parameters
+                if (methodHasValidatedParameters(javaMethodElement)) {
+                    javaMethodElement.annotate(ANN_VALIDATED);
+                }
+
+                // Check if it has Validated Return Value
+                ClassElement returnType = javaMethodElement.getReturnType();
+
+                boolean requiresValidation = recurseAnnotateWithValidIfRequired(returnType);
+                if (requiresValidation) {
+                    methodAnnotationMetadata = javaMethodElement.annotate(ANN_VALID);
+                }
+
+                if (returnType.hasStereotype(ANN_CONSTRAINT)) {
+                    methodAnnotationMetadata = javaMethodElement.annotate(ANN_CONSTRAINT);
+                }
+
+                if (methodAnnotationMetadata.hasStereotype(ANN_VALID) ||
+                        methodAnnotationMetadata.hasStereotype(ANN_CONSTRAINT)) {
+                    // methodAnnotationMetadata = javaMethodElement.annotate(ANN_VALIDATED);
+                    hasConstraints = true;
+                }
             }
 
             if (isDeclaredBean && isExecutable) {
