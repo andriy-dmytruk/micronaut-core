@@ -477,6 +477,7 @@ public class BeanDefinitionWriter extends AbstractClassFileWriter implements Bea
     );
     private static final Type TYPE_QUALIFIERS = Type.getType(Qualifiers.class);
     private static final Type TYPE_QUALIFIER = Type.getType(Qualifier.class);
+    private static final String MESSAGE_ONLY_SINGLE_CALL_PERMITTED = "Only a single call to visitBeanFactoryMethod(..) is permitted";
 
     private final ClassWriter classWriter;
     private final String beanFullClassName;
@@ -737,9 +738,11 @@ public class BeanDefinitionWriter extends AbstractClassFileWriter implements Bea
     @NonNull
     @Override
     public ClassElement[] getTypeArguments() {
-        final Map<String, ClassElement> args = this.typeArguments.get(this.getBeanTypeName());
-        if (CollectionUtils.isNotEmpty(args)) {
-            return args.values().toArray(new ClassElement[0]);
+        if (hasTypeArguments()) {
+            final Map<String, ClassElement> args = this.typeArguments.get(this.getBeanTypeName());
+            if (CollectionUtils.isNotEmpty(args)) {
+                return args.values().toArray(ClassElement.ZERO_CLASS_ELEMENTS);
+            }
         }
         return BeanDefinitionVisitor.super.getTypeArguments();
     }
@@ -845,10 +848,11 @@ public class BeanDefinitionWriter extends AbstractClassFileWriter implements Bea
      * @param factoryClass  The factory class
      * @param factoryMethod The factory method
      */
+    @Override
     public void visitBeanFactoryMethod(ClassElement factoryClass,
                                        MethodElement factoryMethod) {
         if (constructor != null) {
-            throw new IllegalStateException("Only a single call to visitBeanFactoryMethod(..) is permitted");
+            throw new IllegalStateException(MESSAGE_ONLY_SINGLE_CALL_PERMITTED);
         } else {
             constructor = factoryMethod;
             // now prepare the implementation of the build method. See BeanFactory interface
@@ -866,11 +870,12 @@ public class BeanDefinitionWriter extends AbstractClassFileWriter implements Bea
      * @param factoryMethod The factory method
      * @param parameters    The parameters
      */
+    @Override
     public void visitBeanFactoryMethod(ClassElement factoryClass,
                                        MethodElement factoryMethod,
                                        ParameterElement[] parameters) {
         if (constructor != null) {
-            throw new IllegalStateException("Only a single call to visitBeanFactoryMethod(..) is permitted");
+            throw new IllegalStateException(MESSAGE_ONLY_SINGLE_CALL_PERMITTED);
         } else {
             constructor = factoryMethod;
             // now prepare the implementation of the build method. See BeanFactory interface
@@ -887,9 +892,10 @@ public class BeanDefinitionWriter extends AbstractClassFileWriter implements Bea
      * @param factoryClass The factory class
      * @param factoryField The factory field
      */
+    @Override
     public void visitBeanFactoryField(ClassElement factoryClass, FieldElement factoryField) {
         if (constructor != null) {
-            throw new IllegalStateException("Only a single call to visitBeanFactoryMethod(..) is permitted");
+            throw new IllegalStateException(MESSAGE_ONLY_SINGLE_CALL_PERMITTED);
         } else {
             constructor = factoryField;
 
