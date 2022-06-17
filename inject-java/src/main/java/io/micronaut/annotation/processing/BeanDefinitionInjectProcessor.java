@@ -954,7 +954,7 @@ public class BeanDefinitionInjectProcessor extends AbstractInjectAnnotationProce
                 }
 
                 // Check if it has Validated Return Value
-                ClassElement returnType = javaMethodElement.getReturnType();
+                ClassElement returnType = javaMethodElement.getGenericReturnType();
 
                 boolean requiresValidation = recurseAnnotateWithValidIfRequired(returnType);
                 if (requiresValidation) {
@@ -2322,7 +2322,7 @@ public class BeanDefinitionInjectProcessor extends AbstractInjectAnnotationProce
             }
         }
     }
-    
+
     /**
      * A dynamic name.
      */

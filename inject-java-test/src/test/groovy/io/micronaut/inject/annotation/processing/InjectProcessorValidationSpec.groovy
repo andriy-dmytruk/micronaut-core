@@ -30,7 +30,7 @@ import javax.validation.Valid;
 public class A {
     @Executable
     public void giveString(@NotBlank String string) {}
-    
+
     @Executable
     public void giveObject(@Valid B object) {}
 }
@@ -68,7 +68,7 @@ import javax.inject.Singleton;
 public class A {
     @Executable
     public void giveString(String string) {}
-    
+
     @Executable
     public void giveObject(B object) {}
 }
@@ -111,13 +111,13 @@ import javax.validation.constraints.NotBlank;
 public class A {
     @Executable
     public List<@NotBlank String> getStringsList() { return null; }
-    
+
     @Executable
     public Map<@NotBlank String, String> getStringMap() { return null; }
-    
+
     @Executable
     public Map<String, @Min(1) Integer> getIntegerMap() { return null; }
-    
+
     @Executable
     public Optional<@NotBlank String> getOptionalString() { return Optional.empty(); }
 }
@@ -162,10 +162,10 @@ import javax.validation.Valid;
 public class A {
     @Executable
     public List<@Valid B> getList() { return null; }
-    
+
     @Executable
     public Map<Integer, @Valid B> getMap() { return null; }
-    
+
     @Executable
     public Optional<@Valid B> getOptional() { return Optional.empty(); }
 }
@@ -174,7 +174,7 @@ public class A {
 class B {
     @NotBlank
     private String b;
-    
+
     B(@NotBlank String b) { this.b = b; }
     @NotBlank String getB() { return b; }
 }
@@ -216,10 +216,10 @@ import javax.validation.Valid;
 public class A {
     @Executable
     public void putList(List<@NotBlank String> list) {}
-    
+
     @Executable
     public void putMaps(Map<@NotBlank String, String> map, Map<Integer, @Max(10) Integer> map2) {}
-    
+
     @Executable
     public void putObjectList(List<@Valid B> objectsList) {}
 }
@@ -263,7 +263,6 @@ class B {}
         method3Arg1.getTypeParameters()[0].annotationMetadata.hasStereotype("javax.validation.Valid")
     }
 
-//    @Ignore("TODO")
     void "test annotate argument with nested constrained generic parameters as valid"() {
         given:
         var definition = buildBeanDefinition('test.A', '''
@@ -284,12 +283,15 @@ import javax.validation.Valid;
 public class A {
     @Executable
     public void putMap(Map<String, List<@Min(10) Float>> map) {}
-    
+
     @Executable
     public void putDoubleMap(Map<String, Map<String, Optional<@Min(0) Integer>>> map) {}
-    
+
     @Executable
-    public List<List<@Valid B>> getDoubleList() { return null; }
+    public List<List<List<@Valid B>>> getTripleList() { return null; }
+
+    @Executable
+    public List<List<@Valid B>> exchangeDoubleList(List<List<@Valid B>> doubleList) { return null; }
 }
 
 @Introspected
@@ -302,25 +304,31 @@ class B {}
         when:
         var method1 = definition.findPossibleMethods("putMap").findFirst()
         var method2 = definition.findPossibleMethods("putDoubleMap").findFirst()
-        var method3 = definition.findPossibleMethods("getDoubleList").findFirst()
+        var method3 = definition.findPossibleMethods("getTripleList").findFirst()
+        var method4 = definition.findPossibleMethods("exchangeDoubleList").findFirst()
 
         then:
         method1.isPresent()
         method2.isPresent()
         method3.isPresent()
+        method4.isPresent()
 
         when:
         var arg1 = method1.get().getArguments()[0]
         var arg2 = method2.get().getArguments()[0]
-        var returnType = method3.get().getReturnType()
+        var returnType1 = method3.get().getReturnType()
+        var arg4 = method4.get().getArguments()[0]
+        var returnType2 = method4.get().getReturnType()
 
         then:
+        // method void putMap(Map<String, List<@Min(10) Float>> map)
         method1.get().hasStereotype("io.micronaut.validation.Validated")
         arg1.annotationMetadata.hasStereotype("javax.validation.Valid")
         !arg1.getTypeParameters()[0].annotationMetadata.hasStereotype("javax.validation.Valid")
         arg1.getTypeParameters()[1].annotationMetadata.hasStereotype("javax.validation.Valid")
         arg1.typeParameters[1].typeParameters[0].annotationMetadata.hasStereotype("javax.validation.Constraint")
 
+        // method void putDoubleMap(Map<String, Map<String, Optional<@Min(0) Integer>>> map)
         method2.get().hasStereotype("io.micronaut.validation.Validated")
         arg2.annotationMetadata.hasStereotype("javax.validation.Valid")
         !arg2.typeParameters[0].annotationMetadata.hasStereotype("javax.validation.Valid")
@@ -330,10 +338,21 @@ class B {}
         arg2.typeParameters[1].typeParameters[1].typeParameters[0]
                 .annotationMetadata.hasStereotype("javax.validation.Constraint")
 
+        // method List<List<List<@Valid B>>> getTripleList()
         !method3.get().hasStereotype("io.micronaut.validation.Validated")
-        returnType.annotationMetadata.hasStereotype("javax.validation.Valid")
-        returnType.typeParameters[0].annotationMetadata.hasStereotype("javax.validation.Valid")
-        returnType.typeParameters[0].typeParameters[0].annotationMetadata.hasStereotype("javax.validation.Valid")
+        returnType1.annotationMetadata.hasStereotype("javax.validation.Valid")
+        returnType1.typeParameters[0].annotationMetadata.hasStereotype("javax.validation.Valid")
+        returnType1.typeParameters[0].typeParameters[0].annotationMetadata.hasStereotype("javax.validation.Valid")
+
+        // method List<List<@Valid B>> exchangeDoubleList(List<List<@Valid B>> doubleList)
+        method4.get().hasStereotype("io.micronaut.validation.Validated")
+        arg4.annotationMetadata.hasStereotype("javax.validation.Valid")
+        arg4.typeParameters[0].annotationMetadata.hasStereotype("javax.validation.Valid")
+        arg4.typeParameters[0].typeParameters[0].annotationMetadata.hasStereotype("javax.validation.Valid")
+
+        returnType2.annotationMetadata.hasStereotype("javax.validation.Valid")
+        returnType2.typeParameters[0].annotationMetadata.hasStereotype("javax.validation.Valid")
+        returnType2.typeParameters[0].typeParameters[0].annotationMetadata.hasStereotype("javax.validation.Valid")
     }
 
     @Ignore("GenericPlaceholderElement is missing annotations")
@@ -354,10 +373,10 @@ import javax.inject.Singleton;
 class A<T extends B> {
     @Valid
     private T child;
-    
+
     @Executable
-    public @Valid T getChild() { return child; } 
-    
+    public @Valid T getChild() { return child; }
+
     @Executable
     public void setChildren(List<@Valid T> children) {}
 }
@@ -396,9 +415,9 @@ import javax.inject.Singleton;
 @SuppressWarnings("rawtypes")
 class A<T extends B> {
     private T child;
-    
+
     @Executable
-    public T getChild() { return child; } 
+    public T getChild() { return child; }
 }
 
 @SuppressWarnings("rawtypes")
@@ -424,17 +443,17 @@ import javax.validation.Valid;
 class A<T extends A<T, P>, P extends B<T, P>> {
     @Valid
     private P child;
-    
+
     @Executable
     public P getChild() {
         return child;
-    } 
+    }
 }
 
 class B<T extends A<T, P>, P extends B<T, P>> {
     @Valid
     private T parent;
-    
+
     @Executable
     public T getParent() {
         return parent;
@@ -463,7 +482,7 @@ class A {
     @Executable
     public @Valid B getChild() {
         return child;
-    } 
+    }
 }
 
 class B {}
